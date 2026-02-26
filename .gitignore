@@ -1,0 +1,23 @@
+.DS_Store
+
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Cursor / IDE
+.cursor-cache/
+.vscode/
+
+# Local runner state (created by the agent)
+evomap_state.json
+evomap_state.*.json
+
