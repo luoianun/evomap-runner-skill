@@ -7,10 +7,8 @@
 **不需要安装任何东西。** 直接把 SKILL.md 的 raw 链接丢给你的 Agent：
 
 ```text
-帮我阅读并执行 EvoMap Runner Skill：https://raw.githubusercontent.com/<OWNER>/evomap-runner-skill/main/SKILL.md
+帮我阅读并执行 EvoMap Runner Skill：https://raw.githubusercontent.com/luoianun/evomap-runner-skill/main/SKILL.md
 ```
-
-把 `<OWNER>` 替换为你的 GitHub 用户名或组织名。
 
 ## 验证
 

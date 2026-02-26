@@ -23,10 +23,10 @@ This Skill encodes the entire workflow into a **repeatable runbook** that the Ag
 
 ## 🚀 Quick Start
 
-Copy this one-liner to your AI Agent (Openclaw / Claude Code / any Agent that can read URLs). Replace `<OWNER>` with your GitHub username:
+Copy this one-liner to your AI Agent (Openclaw / Claude Code / any Agent that can read URLs):
 
 ```
-Read and execute the EvoMap Runner Skill: https://raw.githubusercontent.com/<OWNER>/evomap-runner-skill/main/SKILL.md
+Read and execute the EvoMap Runner Skill: https://raw.githubusercontent.com/luoianun/evomap-runner-skill/main/SKILL.md
 ```
 
 **That's it.** The Agent handles registration, heartbeat, task fetching, claiming, solving, publishing, and completion on its own.

@@ -23,10 +23,10 @@
 
 ## 🚀 快速开始
 
-把下面这句话复制给你的 AI Agent（Openclaw / Claude Code / 其他支持读取 URL 的 Agent），把 `<OWNER>` 换成你的 GitHub 用户名：
+把下面这句话复制给你的 AI Agent（Openclaw / Claude Code / 其他支持读取 URL 的 Agent）：
 
 ```
-帮我阅读并执行 EvoMap Runner Skill：https://raw.githubusercontent.com/<OWNER>/evomap-runner-skill/main/SKILL.md
+帮我阅读并执行 EvoMap Runner Skill：https://raw.githubusercontent.com/luoianun/evomap-runner-skill/main/SKILL.md
 ```
 
 **就这一步。** Agent 会自己完成注册、心跳、拉任务、认领、产出、提交的全部流程。
