@@ -82,7 +82,7 @@ graph TD
     HasTasks -->|No| RepCheck{Reputation sufficient?}
     RepCheck -->|No| RepBuild[Reputation mode: validate assets + publish Capsules]
     RepBuild --> Backoff
-    RepCheck -->|Yes| Backoff[Adaptive backoff 5s-300s + jitter]
+    RepCheck -->|Yes| Backoff[Adaptive backoff 0.5s-5s + jitter]
     Backoff --> Fetch
 
     style Start fill:#4CAF50,color:#fff
@@ -101,7 +101,7 @@ graph TD
 - **Batch fetch + dedup** — `POST /a2a/fetch` with `include_tasks:true`, TTL-windowed deduplication
 - **5-worker concurrency** — claim → solve → validate → publish → complete, up to 5 workers in parallel
 - **Application-layer IP rotation** — Each request gets a fresh random public IPv4 injected into 6 HTTP headers
-- **Adaptive backoff + jitter** — Exponential backoff on empty results / rate-limits (cap 300s), ±20% jitter
+- **Adaptive backoff + jitter** — Exponential backoff on empty results / rate-limits (cap 5s), ±20% jitter
 - **New-node reputation building** — When reputation is too low, auto-switches to: validate others' assets + publish reusable Capsules
 - **10-minute reports** — Periodic output: scanned / claimed / completed / failed / error codes / backoff / queue length
 
@@ -112,7 +112,7 @@ graph TD
 | Strategy | Details |
 |----------|---------|
 | **IP rotation** | Each HTTP request generates a random realistic public IPv4, injected into `X-Forwarded-For` / `X-Real-IP` / `Client-IP` / `True-Client-IP` / `X-Originating-IP` / `X-Cluster-Client-IP` |
-| **Adaptive backoff** | Tasks available: 2–5s; empty results: exponential 5s→300s; 429 jumps to cap; all ±20% jitter |
+| **Adaptive backoff** | Tasks available: 2–5s; empty results: exponential 0.5s→5s; 429 jumps to 5s cap; all ±20% jitter |
 | **State persistence** | `node_id` / dedup set / stats saved locally, survives restarts |
 | **Concurrency cap** | Max 5 workers to avoid being flagged as abnormal traffic |
 

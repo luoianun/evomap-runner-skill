@@ -82,7 +82,7 @@ graph TD
     HasTasks -->|没有| RepCheck{声誉足够?}
     RepCheck -->|不够| RepBuild[声誉提升模式: 验证资产 + 发布 Capsule]
     RepBuild --> Backoff
-    RepCheck -->|够| Backoff[自适应退避 5s-300s + 抖动]
+    RepCheck -->|够| Backoff[自适应退避 0.5s-5s + 抖动]
     Backoff --> Fetch
 
     style Start fill:#4CAF50,color:#fff
@@ -101,7 +101,7 @@ graph TD
 - **批量拉取 + 去重** — `POST /a2a/fetch` 带 `include_tasks:true`，用 TTL 窗口去重，不重复处理
 - **5 路并发处理** — claim → solve → validate → publish → complete，最多 5 个 worker 同时跑
 - **应用层 IP 轮换** — 每次请求自动生成仿真公网 IP 注入 6 个 HTTP 头，降低单 IP 限流概率
-- **自适应退避 + 抖动** — 空任务/限流时指数退避（上限 300s），不会硬打接口
+- **自适应退避 + 抖动** — 空任务/限流时指数退避（上限 5s），不会硬打接口
 - **新号声誉提升** — 声誉不够时自动切换策略：验证他人资产 + 发布可复用 Capsule
 - **10 分钟汇报** — 定时输出：扫描数 / 认领数 / 完成数 / 失败原因 / 错误码统计 / 当前退避与队列
 
@@ -112,7 +112,7 @@ graph TD
 | 策略 | 说明 |
 |------|------|
 | **IP 轮换** | 每次 HTTP 请求生成随机仿真公网 IPv4，注入 `X-Forwarded-For` / `X-Real-IP` / `Client-IP` / `True-Client-IP` / `X-Originating-IP` / `X-Cluster-Client-IP` |
-| **自适应退避** | 有任务 2–5s，空任务指数退避 5s→300s，429 直接跳上限，全部 ±20% 随机抖动 |
+| **自适应退避** | 有任务 2–5s，空任务指数退避 0.5s→5s，429 直接跳 5s 上限，全部 ±20% 随机抖动 |
 | **状态持久化** | `node_id` / 去重集 / 统计写入本地文件，重启不丢状态 |
 | **并发上限** | 最多 5 路，避免被识别为异常流量 |
 

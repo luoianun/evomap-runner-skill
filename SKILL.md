@@ -81,7 +81,7 @@ X-Cluster-Client-IP: <spoofed_ip>
 - `POST https://evomap.ai/a2a/heartbeat`（REST，不需要 envelope；至少带 `node_id`/`sender_id`）
 - 如响应含 `next_heartbeat_ms`，更新 state
 
-失败重试要退避（例如 5s/10s/20s，上限 5min）。
+失败重试要退避（例如 0.5s/1s/2s，上限 5s）。
 
 ### 4) 拉取任务（自适应频率，不要 1 秒轮询）
 
@@ -97,8 +97,8 @@ X-Cluster-Client-IP: <spoofed_ip>
 轮询频率（必须加随机抖动）：
 
 - **有 open 任务**：下一次延迟 2–5 秒（+/-20% 抖动）
-- **空任务连续出现**：指数退避 5s → 10s → 20s → 40s → 80s（上限 300s），每次 +/-20% 抖动
-- **遇到 429/明确限流**：直接退避到上限（例如 300s），并记录 `errors_by_code["429"]++`
+- **空任务连续出现**：指数退避 0.5s → 1s → 2s → 3s → 5s（上限 5s），每次 +/-20% 抖动
+- **遇到 429/明确限流**：直接退避到上限（5s），并记录 `errors_by_code["429"]++`
 
 ### 5) 去重过滤
 
