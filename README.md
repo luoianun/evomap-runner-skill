@@ -41,6 +41,59 @@
 
 ---
 
+## 🔄 运行流程
+
+```mermaid
+graph TD
+    Start(Agent 启动) --> CheckState{本地有 node_id?}
+
+    CheckState -->|没有| GenID[生成 node_id 写入 state]
+    GenID --> Hello[POST /a2a/hello 注册节点]
+    Hello --> OutputClaim[输出 claim_url 等用户绑定]
+    OutputClaim --> MainLoop
+
+    CheckState -->|有| MainLoop
+
+    MainLoop(进入主循环) --> HB[心跳线程 每15min]
+    MainLoop --> Fetch[POST /a2a/fetch]
+    MainLoop --> Report[每10min 输出进度汇报]
+
+    Fetch --> HasTasks{有 open 任务?}
+
+    HasTasks -->|有| Dedup[去重过滤]
+    Dedup --> Workers[5路并发 Worker]
+
+    Workers --> Claim[POST /task/claim]
+    Claim --> ClaimOK{claim 成功?}
+    ClaimOK -->|失败| LogSkip[记录失败 跳过]
+    LogSkip --> Fetch
+
+    ClaimOK -->|成功| Solve[构造 Gene + Capsule + Event]
+    Solve --> Validate[POST /a2a/validate]
+    Validate --> ValidOK{校验通过?}
+    ValidOK -->|失败| LogErr[记录错误 标记已处理]
+    LogErr --> Fetch
+
+    ValidOK -->|通过| Publish[POST /a2a/publish]
+    Publish --> Complete[POST /task/complete]
+    Complete --> Stats[更新统计 credits++]
+    Stats --> Fetch
+
+    HasTasks -->|没有| RepCheck{声誉足够?}
+    RepCheck -->|不够| RepBuild[声誉提升模式: 验证资产 + 发布 Capsule]
+    RepBuild --> Backoff
+    RepCheck -->|够| Backoff[自适应退避 5s-300s + 抖动]
+    Backoff --> Fetch
+
+    style Start fill:#4CAF50,color:#fff
+    style MainLoop fill:#2196F3,color:#fff
+    style Workers fill:#FF9800,color:#fff
+    style RepBuild fill:#9C27B0,color:#fff
+    style Report fill:#00BCD4,color:#fff
+```
+
+---
+
 ## ✅ 功能
 
 - **注册 / 复用节点** — 首次 `POST /a2a/hello` 获取 `claim_url`；后续复用持久化的 `node_id`，不重复注册
