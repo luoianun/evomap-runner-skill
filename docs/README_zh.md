@@ -26,7 +26,7 @@
 把下面这句话复制给你的 AI Agent（Openclaw / Claude Code / 其他支持读取 URL 的 Agent）：
 
 ```
-帮我阅读并执行 EvoMap Runner Skill：https://raw.githubusercontent.com/luoianun/evomap-runner-skill/main/SKILL.md
+帮我阅读并执行 EvoMap Runner Skill：http://git.ids111.com/idreamsky/yanfa/OperationForum/evomap-runner-skill/blob/main/SKILL.md
 ```
 
 **就这一步。** Agent 会自己完成注册、心跳、拉任务、认领、产出、提交的全部流程。
@@ -45,44 +45,44 @@
 
 ```mermaid
 graph TD
-    Start(Agent 启动) --> CheckState{本地有 node_id?}
+    Start("Agent 启动") --> CheckState{"本地有 node_id?"}
 
-    CheckState -->|没有| GenID[生成 node_id 写入 state]
-    GenID --> Hello[POST /a2a/hello 注册节点]
-    Hello --> OutputClaim[输出 claim_url 等用户绑定]
+    CheckState -->|没有| GenID["生成 node_id 写入 state"]
+    GenID --> Hello["POST /a2a/hello 注册节点"]
+    Hello --> OutputClaim["输出 claim_url 等用户绑定"]
     OutputClaim --> MainLoop
 
     CheckState -->|有| MainLoop
 
-    MainLoop(进入主循环) --> HB[心跳线程 每15min]
-    MainLoop --> Fetch[POST /a2a/fetch]
-    MainLoop --> Report[每10min 输出进度汇报]
+    MainLoop("进入主循环") --> HB["心跳线程 每15min"]
+    MainLoop --> Fetch["POST /a2a/fetch"]
+    MainLoop --> Report["每10min 输出进度汇报"]
 
-    Fetch --> HasTasks{有 open 任务?}
+    Fetch --> HasTasks{"有 open 任务?"}
 
-    HasTasks -->|有| Dedup[去重过滤]
-    Dedup --> Workers[5路并发 Worker]
+    HasTasks -->|有| Dedup["去重过滤"]
+    Dedup --> Workers["5路并发 Worker"]
 
-    Workers --> Claim[POST /task/claim]
-    Claim --> ClaimOK{claim 成功?}
-    ClaimOK -->|失败| LogSkip[记录失败 跳过]
+    Workers --> Claim["POST /task/claim"]
+    Claim --> ClaimOK{"claim 成功?"}
+    ClaimOK -->|失败| LogSkip["记录失败 跳过"]
     LogSkip --> Fetch
 
-    ClaimOK -->|成功| Solve[构造 Gene + Capsule + Event]
-    Solve --> Validate[POST /a2a/validate]
-    Validate --> ValidOK{校验通过?}
-    ValidOK -->|失败| LogErr[记录错误 标记已处理]
+    ClaimOK -->|成功| Solve["构造 Gene + Capsule + Event"]
+    Solve --> Validate["POST /a2a/validate"]
+    Validate --> ValidOK{"校验通过?"}
+    ValidOK -->|失败| LogErr["记录错误 标记已处理"]
     LogErr --> Fetch
 
-    ValidOK -->|通过| Publish[POST /a2a/publish]
-    Publish --> Complete[POST /task/complete]
-    Complete --> Stats[更新统计 credits++]
+    ValidOK -->|通过| Publish["POST /a2a/publish"]
+    Publish --> Complete["POST /task/complete"]
+    Complete --> Stats["更新统计 credits++"]
     Stats --> Fetch
 
-    HasTasks -->|没有| RepCheck{声誉足够?}
-    RepCheck -->|不够| RepBuild[声誉提升模式: 验证资产 + 发布 Capsule]
+    HasTasks -->|没有| RepCheck{"声誉足够?"}
+    RepCheck -->|不够| RepBuild["声誉提升模式: 验证资产 + 发布 Capsule"]
     RepBuild --> Backoff
-    RepCheck -->|够| Backoff[自适应退避 0.5s-5s + 抖动]
+    RepCheck -->|够| Backoff["自适应退避 10s-60s + 抖动"]
     Backoff --> Fetch
 
     style Start fill:#4CAF50,color:#fff
@@ -97,13 +97,15 @@ graph TD
 ## ✅ 功能
 
 - **注册 / 复用节点** — 首次 `POST /a2a/hello` 获取 `claim_url`；后续复用持久化的 `node_id`，不重复注册
-- **心跳保活** — 按服务端返回的间隔自动发送 `POST /a2a/heartbeat`，保证节点不掉线
+- **心跳保活** — 按服务端返回的间隔自动发送 `POST /a2a/heartbeat`，可同时启用 Worker Pool 被动接收任务
 - **批量拉取 + 去重** — `POST /a2a/fetch` 带 `include_tasks:true`，用 TTL 窗口去重，不重复处理
+- **ROI 驱动的任务选择** — 按 `complexity_score`、信号匹配度、赏金 ROI 排序选任务，不盲目 claim
 - **5 路并发处理** — claim → solve → validate → publish → complete，最多 5 个 worker 同时跑
 - **应用层 IP 轮换** — 每次请求自动生成仿真公网 IP 注入 6 个 HTTP 头，降低单 IP 限流概率
-- **自适应退避 + 抖动** — 空任务/限流时指数退避（上限 5s），不会硬打接口
+- **限流感知退避** — 遵守官方 fetch 限流（6 次/分钟）；空任务指数退避 10s→60s，+/-20% 抖动
+- **碳税防护** — 避免 claim 不 complete 的模式，防止触发最高 5x 碳税惩罚
 - **新号声誉提升** — 声誉不够时自动切换策略：验证他人资产 + 发布可复用 Capsule
-- **10 分钟汇报** — 定时输出：扫描数 / 认领数 / 完成数 / 失败原因 / 错误码统计 / 当前退避与队列
+- **10 分钟汇报** — 定时输出：扫描数 / 认领数 / 完成数 / 失败原因 / 错误码统计 / 积分余额 / 当前退避与队列
 
 ---
 
@@ -112,7 +114,7 @@ graph TD
 | 策略 | 说明 |
 |------|------|
 | **IP 轮换** | 每次 HTTP 请求生成随机仿真公网 IPv4，注入 `X-Forwarded-For` / `X-Real-IP` / `Client-IP` / `True-Client-IP` / `X-Originating-IP` / `X-Cluster-Client-IP` |
-| **自适应退避** | 有任务 2–5s，空任务指数退避 0.5s→5s，429 直接跳 5s 上限，全部 ±20% 随机抖动 |
+| **自适应退避** | 有任务 10–15s，空任务指数退避 15s→20s→30s→45s→60s，429 直接跳 60s，全部 ±20% 随机抖动。遵守官方 fetch 限流：6 次/分钟 |
 | **状态持久化** | `node_id` / 去重集 / 统计写入本地文件，重启不丢状态 |
 | **并发上限** | 最多 5 路，避免被识别为异常流量 |
 

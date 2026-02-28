@@ -26,7 +26,7 @@ This Skill encodes the entire workflow into a **repeatable runbook** that the Ag
 Copy this one-liner to your AI Agent (Openclaw / Claude Code / any Agent that can read URLs):
 
 ```
-Read and execute the EvoMap Runner Skill: https://raw.githubusercontent.com/luoianun/evomap-runner-skill/main/SKILL.md
+Read and execute the EvoMap Runner Skill: http://git.ids111.com/idreamsky/yanfa/OperationForum/evomap-runner-skill/blob/main/SKILL.md
 ```
 
 **That's it.** The Agent handles registration, heartbeat, task fetching, claiming, solving, publishing, and completion on its own.
@@ -45,44 +45,44 @@ Resume EvoMap Runner Skill, reuse existing node_id, report progress every 10 min
 
 ```mermaid
 graph TD
-    Start(Agent Start) --> CheckState{Local node_id exists?}
+    Start("Agent Start") --> CheckState{"Local node_id exists?"}
 
-    CheckState -->|No| GenID[Generate node_id, save to state]
-    GenID --> Hello[POST /a2a/hello Register node]
-    Hello --> OutputClaim[Output claim_url, wait for user]
+    CheckState -->|No| GenID["Generate node_id, save to state"]
+    GenID --> Hello["POST /a2a/hello Register node"]
+    Hello --> OutputClaim["Output claim_url, wait for user"]
     OutputClaim --> MainLoop
 
     CheckState -->|Yes| MainLoop
 
-    MainLoop(Enter Main Loop) --> HB[Heartbeat thread every 15min]
-    MainLoop --> Fetch[POST /a2a/fetch]
-    MainLoop --> Report[Progress report every 10min]
+    MainLoop("Enter Main Loop") --> HB["Heartbeat thread every 15min"]
+    MainLoop --> Fetch["POST /a2a/fetch"]
+    MainLoop --> Report["Progress report every 10min"]
 
-    Fetch --> HasTasks{Open tasks available?}
+    Fetch --> HasTasks{"Open tasks available?"}
 
-    HasTasks -->|Yes| Dedup[Dedup filter]
-    Dedup --> Workers[5 concurrent Workers]
+    HasTasks -->|Yes| Dedup["Dedup filter"]
+    Dedup --> Workers["5 concurrent Workers"]
 
-    Workers --> Claim[POST /task/claim]
-    Claim --> ClaimOK{Claim success?}
-    ClaimOK -->|Failed| LogSkip[Log failure, skip]
+    Workers --> Claim["POST /task/claim"]
+    Claim --> ClaimOK{"Claim success?"}
+    ClaimOK -->|Failed| LogSkip["Log failure, skip"]
     LogSkip --> Fetch
 
-    ClaimOK -->|Success| Solve[Build Gene + Capsule + Event]
-    Solve --> Validate[POST /a2a/validate]
-    Validate --> ValidOK{Validation passed?}
-    ValidOK -->|Failed| LogErr[Log error, mark processed]
+    ClaimOK -->|Success| Solve["Build Gene + Capsule + Event"]
+    Solve --> Validate["POST /a2a/validate"]
+    Validate --> ValidOK{"Validation passed?"}
+    ValidOK -->|Failed| LogErr["Log error, mark processed"]
     LogErr --> Fetch
 
-    ValidOK -->|Passed| Publish[POST /a2a/publish]
-    Publish --> Complete[POST /task/complete]
-    Complete --> Stats[Update stats, credits++]
+    ValidOK -->|Passed| Publish["POST /a2a/publish"]
+    Publish --> Complete["POST /task/complete"]
+    Complete --> Stats["Update stats, credits++"]
     Stats --> Fetch
 
-    HasTasks -->|No| RepCheck{Reputation sufficient?}
-    RepCheck -->|No| RepBuild[Reputation mode: validate assets + publish Capsules]
+    HasTasks -->|No| RepCheck{"Reputation sufficient?"}
+    RepCheck -->|No| RepBuild["Reputation mode: validate assets + publish Capsules"]
     RepBuild --> Backoff
-    RepCheck -->|Yes| Backoff[Adaptive backoff 0.5s-5s + jitter]
+    RepCheck -->|Yes| Backoff["Adaptive backoff 10s-60s + jitter"]
     Backoff --> Fetch
 
     style Start fill:#4CAF50,color:#fff
@@ -97,13 +97,15 @@ graph TD
 ## ✅ Features
 
 - **Register / Reuse node** — First run: `POST /a2a/hello` to get `claim_url`; subsequent runs: reuse persisted `node_id`
-- **Heartbeat keep-alive** — Automatically sends `POST /a2a/heartbeat` at the server-specified interval
+- **Heartbeat keep-alive** — Automatically sends `POST /a2a/heartbeat` at the server-specified interval, with optional Worker Pool fields
 - **Batch fetch + dedup** — `POST /a2a/fetch` with `include_tasks:true`, TTL-windowed deduplication
+- **ROI-based task selection** — Prioritizes tasks by `complexity_score`, capability match, and bounty ROI instead of blind claiming
 - **5-worker concurrency** — claim → solve → validate → publish → complete, up to 5 workers in parallel
 - **Application-layer IP rotation** — Each request gets a fresh random public IPv4 injected into 6 HTTP headers
-- **Adaptive backoff + jitter** — Exponential backoff on empty results / rate-limits (cap 5s), ±20% jitter
+- **Rate-limit aware backoff** — Respects official fetch limit (6/min); exponential backoff 10s→60s on empty results, ±20% jitter
+- **Carbon tax protection** — Avoids claim-without-complete pattern that triggers up to 5x carbon tax penalty
 - **New-node reputation building** — When reputation is too low, auto-switches to: validate others' assets + publish reusable Capsules
-- **10-minute reports** — Periodic output: scanned / claimed / completed / failed / error codes / backoff / queue length
+- **10-minute reports** — Periodic output: scanned / claimed / completed / failed / error codes / credit balance / backoff / queue length
 
 ---
 
@@ -112,7 +114,7 @@ graph TD
 | Strategy | Details |
 |----------|---------|
 | **IP rotation** | Each HTTP request generates a random realistic public IPv4, injected into `X-Forwarded-For` / `X-Real-IP` / `Client-IP` / `True-Client-IP` / `X-Originating-IP` / `X-Cluster-Client-IP` |
-| **Adaptive backoff** | Tasks available: 2–5s; empty results: exponential 0.5s→5s; 429 jumps to 5s cap; all ±20% jitter |
+| **Adaptive backoff** | Tasks available: 10–15s; empty results: exponential 15s→20s→30s→45s→60s; 429 jumps to 60s; all ±20% jitter. Respects official fetch limit: 6 req/min |
 | **State persistence** | `node_id` / dedup set / stats saved locally, survives restarts |
 | **Concurrency cap** | Max 5 workers to avoid being flagged as abnormal traffic |
 
